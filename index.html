@@ -150,6 +150,7 @@
             ];
 
             const infoWindow = new google.maps.InfoWindow();
+            const markers = [];
 
             // Añadir marcadores para hubs
             hubs.forEach(location => {
@@ -171,6 +172,8 @@
                     infoWindow.setContent(`<div><strong>${location.name}</strong><br>${location.address}</div>`);
                     infoWindow.open(map, marker);
                 });
+
+                markers.push(marker);
             });
 
             const input = document.getElementById('search-box');
@@ -186,7 +189,7 @@
                 }
 
                 // Limpiar marcadores anteriores y lista de distancias
-                const markers = [];
+                markers.forEach(marker => marker.setMap(null));
                 const distanceList = document.getElementById('distance-list');
                 distanceList.innerHTML = '';
 
@@ -204,43 +207,40 @@
                         title: 'Ubicación buscada',
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
-                            scale
-                            scale: 10,
-                            fillColor: 'blue',
-                            fillOpacity: 1,
-                            strokeWeight: 1,
-                            strokeColor: 'black'
-                        }
-                    });
-
-                    markers.push(marker);
-
-                    hubs.forEach(hub => {
-                        const hubLocation = new google.maps.LatLng(hub.lat, hub.lng);
-                        const distance = google.maps.geometry.spherical.computeDistanceBetween(placeLocation, hubLocation);
-                        const distanceKm = (distance / 1000).toFixed(2);
-
-                        const distanceItem = document.createElement('div');
-                        distanceItem.classList.add('distance-item');
-                        distanceItem.classList.add(distanceKm <= 3 ? 'green-bg' : 'red-bg');
-                        distanceItem.innerHTML = `<strong>${hub.name}</strong> - ${distanceKm} km`;
-
-                        distanceList.appendChild(distanceItem);
-                    });
-
-                    // Cerrar todas las ventanas de información abiertas
-                    google.maps.event.addListener(map, 'click', () => {
-                        infoWindow.close();
-                    });
-
-                    map.setCenter(placeLocation);
+ &#8203;:citation[oaicite:0]{index=0}&#8203;
+                        scale: 10,
+                        fillColor: 'blue',
+                        fillOpacity: 1,
+                        strokeWeight: 1,
+                        strokeColor: 'black'
+                    }
                 });
 
-                input.value = '';
-            });
-        }
+                markers.push(marker);
 
-        google.maps.event.addDomListener(window, 'load', initMap);
+                hubs.forEach(hub => {
+                    const hubLocation = new google.maps.LatLng(hub.lat, hub.lng);
+                    const distance = google.maps.geometry.spherical.computeDistanceBetween(placeLocation, hubLocation);
+                    const distanceKm = (distance / 1000).toFixed(2);
+
+                    const distanceItem = document.createElement('div');
+                    distanceItem.classList.add('distance-item');
+                    distanceItem.classList.add(distanceKm <= 3 ? 'green-bg' : 'red-bg');
+                    distanceItem.innerHTML = `<strong>${hub.name}</strong> - ${distanceKm} km`;
+
+                    distanceList.appendChild(distanceItem);
+                });
+
+                map.setCenter(placeLocation);
+            });
+
+            input.value = '';
+        });
+    }
+
+    google.maps.event.addDomListener(window, 'load', initMap);
     </script>
 </body>
 </html>
+
+
