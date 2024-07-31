@@ -149,7 +149,7 @@
                 { name: "Espacio Urbano Las Rejas", comuna: "Estación Central", address: "Av. María Rozas Velásquez 73, 9170428 Santiago, Estación Central, Región Metropolitana", lat: -33.454, lng: -70.719, type: 'activo' }
             ];
 
-            const infoWindows = [];
+            const infoWindow = new google.maps.InfoWindow();
 
             // Añadir marcadores para hubs
             hubs.forEach(location => {
@@ -167,20 +167,9 @@
                     }
                 });
 
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `<div><strong>${location.name}</strong></div>`,
-                    disableAutoPan: true
-                });
-
-                infoWindows.push(infoWindow);
-
                 marker.addListener('click', () => {
-                    infoWindows.forEach(infowin => infowin.close());
-                    const infowindow = new google.maps.InfoWindow({
-                        content: `<div><strong>${location.name}</strong><br>${location.address}</div>`
-                    });
-                    infowindow.open(map, marker);
-                    infoWindows.push(infowindow);
+                    infoWindow.setContent(`<div><strong>${location.name}</strong><br>${location.address}</div>`);
+                    infoWindow.open(map, marker);
                 });
             });
 
@@ -197,7 +186,6 @@
                 }
 
                 // Limpiar marcadores anteriores y lista de distancias
-                markers.forEach(marker => marker.setMap(null));
                 const markers = [];
                 const distanceList = document.getElementById('distance-list');
                 distanceList.innerHTML = '';
@@ -209,13 +197,14 @@
 
                     const placeLocation = place.geometry.location;
 
-                                        // Agregar marcador de la ubicación buscada
+                    // Agregar marcador de la ubicación buscada
                     const marker = new google.maps.Marker({
                         position: placeLocation,
                         map: map,
                         title: 'Ubicación buscada',
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
+                            scale
                             scale: 10,
                             fillColor: 'blue',
                             fillOpacity: 1,
@@ -241,13 +230,12 @@
 
                     // Cerrar todas las ventanas de información abiertas
                     google.maps.event.addListener(map, 'click', () => {
-                        infoWindows.forEach(infoWindow => {
-                            infoWindow.close();
-                        });
+                        infoWindow.close();
                     });
+
+                    map.setCenter(placeLocation);
                 });
 
-                map.setCenter(places[0].geometry.location);
                 input.value = '';
             });
         }
@@ -256,4 +244,3 @@
     </script>
 </body>
 </html>
-
