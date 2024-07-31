@@ -139,22 +139,22 @@
                     position: { lat: location.lat, lng: location.lng },
                     map: map,
                     title: location.name,
-                    label: {
-                        text: location.name,
-                        color: "black",
-                        fontSize: "12px",
-                        fontWeight: "bold"
-                    },
                     icon: {
                         url: "http://maps.google.com/mapfiles/ms/icons/black-dot.png" // Icono negro para hubs
                     }
                 });
 
-                const infowindow = new google.maps.InfoWindow({
-                    content: `<div><strong>${location.name}</strong><br>${location.address}</div>`
+                const label = new google.maps.InfoWindow({
+                    content: `<div><strong>${location.name}</strong></div>`,
+                    disableAutoPan: true
                 });
 
+                label.open(map, marker);
+
                 marker.addListener('click', () => {
+                    const infowindow = new google.maps.InfoWindow({
+                        content: `<div><strong>${location.name}</strong><br>${location.address}</div>`
+                    });
                     infowindow.open(map, marker);
                 });
             });
@@ -219,4 +219,3 @@
     </script>
 </body>
 </html>
-
