@@ -207,40 +207,40 @@
                         title: 'Ubicación buscada',
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
- &#8203;:citation[oaicite:0]{index=0}&#8203;
-                        scale: 10,
-                        fillColor: 'blue',
-                        fillOpacity: 1,
-                        strokeWeight: 1,
-                        strokeColor: 'black'
-                    }
+                            scale: 10,
+                            fillColor: 'blue',
+                            fillOpacity: 1,
+                            strokeWeight: 1,
+                            strokeColor: 'black'
+                                               }
+                    });
+
+                    markers.push(marker);
+
+                    hubs.forEach(hub => {
+                        const hubLocation = new google.maps.LatLng(hub.lat, hub.lng);
+                        const distance = google.maps.geometry.spherical.computeDistanceBetween(placeLocation, hubLocation);
+                        const distanceKm = (distance / 1000).toFixed(2);
+
+                        const distanceItem = document.createElement('div');
+                        distanceItem.classList.add('distance-item');
+                        distanceItem.classList.add(distanceKm <= 3 ? 'green-bg' : 'red-bg');
+                        distanceItem.innerHTML = `<strong>${hub.name}</strong> - ${distanceKm} km`;
+
+                        distanceList.appendChild(distanceItem);
+                    });
+
+                    map.setCenter(placeLocation);
                 });
 
-                markers.push(marker);
-
-                hubs.forEach(hub => {
-                    const hubLocation = new google.maps.LatLng(hub.lat, hub.lng);
-                    const distance = google.maps.geometry.spherical.computeDistanceBetween(placeLocation, hubLocation);
-                    const distanceKm = (distance / 1000).toFixed(2);
-
-                    const distanceItem = document.createElement('div');
-                    distanceItem.classList.add('distance-item');
-                    distanceItem.classList.add(distanceKm <= 3 ? 'green-bg' : 'red-bg');
-                    distanceItem.innerHTML = `<strong>${hub.name}</strong> - ${distanceKm} km`;
-
-                    distanceList.appendChild(distanceItem);
-                });
-
-                map.setCenter(placeLocation);
+                input.value = '';
             });
+        }
 
-            input.value = '';
-        });
-    }
-
-    google.maps.event.addDomListener(window, 'load', initMap);
+        google.maps.event.addDomListener(window, 'load', initMap);
     </script>
 </body>
 </html>
+
 
 
