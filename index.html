@@ -38,6 +38,16 @@
             border-radius: 5px;
             border: 1px solid #ccc;
         }
+        #reset-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            background-color: #ff0000;
+            color: white;
+            cursor: pointer;
+        }
         #map-container {
             position: relative;
             width: 80%;
@@ -106,6 +116,7 @@
     <div id="title">¿A cuánto está el hub de carga más cercano?</div>
     <div id="search-container">
         <input id="search-box" type="text" placeholder="Buscar dirección">
+        <button id="reset-button">Reiniciar búsqueda</button>
     </div>
     <div id="map-container">
         <div id="map"></div>
@@ -151,7 +162,9 @@
 
             const infoWindow = new google.maps.InfoWindow();
             const markers = [];
-
+            const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true });
+            directionsRenderer.setMap(map);
             // Añadir marcadores para hubs
             hubs.forEach(location => {
                 const marker = new google.maps.Marker({
@@ -212,7 +225,7 @@
                             fillOpacity: 1,
                             strokeWeight: 1,
                             strokeColor: 'black'
-                                               }
+                        }
                     });
 
                     markers.push(marker);
@@ -228,12 +241,57 @@
                         distanceItem.innerHTML = `<strong>${hub.name}</strong> - ${distanceKm} km`;
 
                         distanceList.appendChild(distanceItem);
+
+                        // Mostrar ruta entre la ubicación buscada y el hub
+                        directionsService.route({
+                            origin: placeLocation,
+                            destination: hubLocation,
+                            travelMode: 'DRIVING'
+                        }, (response, status) => {
+                            if (status === 'OK') {
+                                directionsRenderer.setDirections(response);
+                            }
+                        });
                     });
 
                     map.setCenter(placeLocation);
                 });
 
                 input.value = '';
+            });
+
+            document.getElementById('reset-button').addEventListener('click', () => {
+                // Reiniciar el mapa y la lista de distancias
+                markers.forEach(marker => marker.setMap(null));
+                distanceList.innerHTML = '';
+                input.value = '';
+                directionsRenderer.set('directions', null);
+                map.setCenter({ lat: -33.4489, lng: -70.6693 });
+                map.setZoom(13);
+
+                // Volver a agregar los marcadores de los hubs
+                hubs.forEach(location => {
+                    const marker = new google.maps.Marker({
+                        position: { lat: location.lat, lng: location.lng },
+                        map: map,
+                        title: location.name,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 10,
+                            fillColor: location.type === 'activo' ? 'green' : 'red',
+                            fillOpacity: 1,
+                            strokeWeight: 1,
+                            strokeColor: 'black'
+                        }
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.setContent(`<div><strong>${location.name}</strong><br>${location.address}</div>`);
+                        infoWindow.open(map, marker);
+                    });
+
+                    markers.push(marker);
+                });
             });
         }
 
