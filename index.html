@@ -3,7 +3,6 @@
 <head>
     <title>Integración Dinámica de Google Maps</title>
     <style>
-        /* Agregar estilos CSS necesarios */
         #map {
             height: 80%;
         }
@@ -53,11 +52,81 @@
 
     <script>
         let mapa;
-        let marcadores = [];
-        let ventanaInfo = new google.maps.InfoWindow();
-        let servicioDirecciones = new google.maps.DirectionsService();
         let renderizadorDirecciones = new google.maps.DirectionsRenderer();
-        let circuloBusqueda;
+        let ventanaInfo = new google.maps.InfoWindow();
+        let marcadores = [];
+
+        function initMap() {
+            mapa = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -33.4489, lng: -70.6693 },
+                zoom: 12
+            });
+
+            renderizadorDirecciones.setMap(mapa);
+
+            hubs.forEach(hub => {
+                let marcador = new google.maps.Marker({
+                    position: { lat: hub.lat, lng: hub.lng },
+                    map: mapa,
+                    title: hub.nombre,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: hub.tipo === 'activo' ? 'green' : 'red',
+                        fillOpacity: 1,
+                        strokeWeight: 1,
+                        strokeColor: 'black'
+                    }
+                });
+
+                google.maps.event.addListener(marcador, 'click', function () {
+                    ventanaInfo.setContent('<div><strong>' + hub.nombre + '</strong><br>' + hub.direccion + '</div>');
+                    ventanaInfo.open(mapa, this);
+                });
+
+                marcadores.push(marcador);
+            });
+
+            document.getElementById('search-box').addEventListener('input', function () {
+                buscarHubs(this.value);
+            });
+
+            document.getElementById('reset-button').addEventListener('click', function () {
+                resetMap();
+            });
+        }
+
+        function buscarHubs(termino) {
+            const resultados = hubs.filter(hub => hub.nombre.toLowerCase().includes(termino.toLowerCase()));
+            mostrarResultados(resultados);
+        }
+
+        function mostrarResultados(resultados) {
+            const listaResultados = document.getElementById('result-list');
+            listaResultados.innerHTML = '';
+
+            resultados.forEach(resultado => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.textContent = resultado.nombre;
+                item.addEventListener('click', function () {
+                    centrarMapa(resultado);
+                });
+                listaResultados.appendChild(item);
+            });
+        }
+
+        function centrarMapa(hub) {
+            mapa.setCenter({ lat: hub.lat, lng: hub.lng });
+            mapa.setZoom(15);
+        }
+
+        function resetMap() {
+            mapa.setCenter({ lat: -33.4489, lng: -70.6693 });
+            mapa.setZoom(12);
+            document.getElementById('search-box').value = '';
+            document.getElementById('result-list').innerHTML = '';
+        }
 
         const hubs = [
             { lat: -33.509915, lng: -70.650638, nombre: "Ciudad del niño", direccion: "Gran Av. José Miguel Carrera 6150, 8930520 San Miguel, Región Metropolitana", tipo: "futuro" },
@@ -65,180 +134,9 @@
             { lat: -33.501710, lng: -70.662125, nombre: "Portal el Llano", direccion: "Llano Subercaseaux, 8910339 San Miguel, Región Metropolitana", tipo: "futuro" },
             { lat: -33.444121, lng: -70.649597, nombre: "Alto San Francisco", direccion: "San Francisco 75, Santiago, Región Metropolitana", tipo: "futuro" },
             { lat: -33.457415, lng: -70.649070, nombre: "Nathaniel Cox", direccion: "Nataniel Cox 620, 8331081 Santiago, Región Metropolitana", tipo: "futuro" },
-            { lat: -33.456594, lng: -70.648503, nombre: "Vicuña Mackenna", direccion: "Av. Vicuña Mackenna 665, 8330435 Santiago, Región Metropolitana", tipo: "futuro" },
-            { lat: -33.464472, lng: -70.620384, nombre: "Ñuble", direccion: "Av. Vicuña Mackenna 1700, Santiago, Ñuñoa, Región Metropolitana", tipo: "futuro" },
-            { lat: -33.422366, lng: -70.650869, nombre: "Independencia", direccion: "Av. Independencia 565, 8380538 Independencia, Región Metropolitana", tipo: "futuro" },
-            { lat: -33.402900, lng: -70.579174, nombre: "Parque Arauco", direccion: "Av. Pdte. Kennedy 5413, 7550000 Las Condes, Región Metropolitana", tipo: "activo" },
-            { lat: -33.465957, lng: -70.699735, nombre: "Espacio Urbano Las Rejas", direccion: "Av. María Rozas Velásquez 73, 9170428 Santiago, Estación Central, Región Metropolitana", tipo: "activo" }
+            { lat: -33.456594, lng: -70.648503, nombre: "Otra dirección", direccion: "Alguna dirección más", tipo: "futuro" }
         ];
-
-        function agregarMarcadoresHubs() {
-            hubs.forEach(ubicacion => {
-                const marcador = new google.maps.Marker({
-                    position: { lat: ubicacion.lat, lng: ubicacion.lng },
-                    map: mapa,
-                    title: ubicacion.nombre,
-                    label: ubicacion.nombre,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 10,
-                        fillColor: ubicacion.tipo === 'activo' ? 'green' : 'red',
-                        fillOpacity: 1,
-                        strokeWeight: 1,
-                        strokeColor: 'black'
-                    },
-                    animation: google.maps.Animation.DROP
-                });
-
-                marcador.addListener('click', () => {
-                    ventanaInfo.setContent(`<div><strong>${ubicacion.nombre}</strong><br>${ubicacion.direccion}</div>`);
-                    ventanaInfo.open(mapa, marcador);
-                });
-
-                marcadores.push(marcador);
-            });
-        }
-
-        function inicializarMapa() {
-            // Inicializar el mapa
-            mapa = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: -33.4489, lng: -70.6693 },
-                zoom: 13
-            });
-
-            // Agregar marcadores de hubs
-            agregarMarcadoresHubs();
-            renderizadorDirecciones.setMap(mapa);
-
-            const input = document.getElementById('search-box');
-            const searchBox = new google.maps.places.SearchBox(input);
-
-            mapa.controls[google.maps.ControlPosition.TOP_CENTER].push(input);
-
-            searchBox.addListener('places_changed', () => {
-                const places = searchBox.getPlaces();
-
-                if (places.length === 0) {
-                    return;
-                }
-
-                // Limpiar marcadores anteriores y lista de distancias
-                marcadores.forEach(marcador => marcador.setMap(null));
-                const listaDistancias = document.getElementById('distance-list');
-                listaDistancias.innerHTML = '';
-                const listaResultados = document.getElementById('result-list');
-                listaResultados.innerHTML = '';
-
-                places.forEach(lugar => {
-                    if (!lugar.geometry) {
-                        return;
-                    }
-
-                    const ubicacionLugar = lugar.geometry.location;
-
-                    // Agregar marcador de la ubicación buscada
-                    const marcador = new google.maps.Marker({
-                        position: ubicacionLugar,
-                        map: mapa,
-                        title: lugar.name || 'Ubicación buscada',
-                        label: lugar.name || 'Ubicación buscada',
-                        icon: {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            scale: 10,
-                            fillColor: 'blue',
-                            fillOpacity: 1,
-                            strokeWeight: 1,
-                            strokeColor: 'black'
-                        },
-                        animation: google.maps.Animation.BOUNCE
-                    });
-
-                    marcadores.push(marcador);
-
-                    // Dibujar un círculo alrededor de la ubicación buscada
-                    if (circuloBusqueda) {
-                        circuloBusqueda.setMap(null);
-                    }
-                    circuloBusqueda = new google.maps.Circle({
-                        map: mapa,
-                        radius: 3000,
-                        fillColor: '#AA0000',
-                        fillOpacity: 0.2,
-                        strokeColor: '#AA0000',
-                        strokeOpacity: 0.5,
-                        strokeWeight: 2,
-                        center: ubicacionLugar
-                    });
-
-                    hubs.forEach(hub => {
-                        const ubicacionHub = new google.maps.LatLng(hub.lat, hub.lng);
-                        const distancia = google.maps.geometry.spherical.computeDistanceBetween(ubicacionLugar, ubicacionHub);
-                        const distanciaKm = (distancia / 1000).toFixed(2);
-
-                        const itemDistancia = document.createElement('div');
-                        itemDistancia.classList.add('distance-item', distanciaKm <= 3 ? 'green-bg' : 'red-bg');
-                        itemDistancia.innerHTML = `<strong>${hub.nombre}</strong> - ${distanciaKm} km`;
-
-                        listaDistancias.appendChild(itemDistancia);
-
-                        // Mostrar ruta entre la ubicación buscada y el hub
-                        servicioDirecciones.route({
-                            origin: ubicacionLugar,
-                            destination: ubicacionHub,
-                            travelMode: 'DRIVING'
-                        }, (response, status) => {
-                            if (status === 'OK') {
-                                renderizadorDirecciones.setDirections(response);
-                            } else {
-                                console.error(`La solicitud de direcciones falló debido a ${status}`);
-                            }
-                        });
-                    });
-
-                    mapa.panTo(ubicacionLugar);
-                    mapa.setZoom(14);
-
-                    // Agregar resultado de búsqueda a la lista
-                    const itemResultado = document.createElement('div');
-                    itemResultado.classList.add('result-item');
-                    itemResultado.textContent = lugar.name;
-                    itemResultado.addEventListener('click', () => {
-                        mapa.panTo(ubicacionLugar);
-                        mapa.setZoom(14);
-                        marcador.setAnimation(google.maps.Animation.BOUNCE);
-                        setTimeout(() => marcador.setAnimation(null), 1500);
-                    });
-                    listaResultados.appendChild(itemResultado);
-                });
-
-                input.value = '';
-            });
-
-            document.getElementById('reset-button').addEventListener('click', () => {
-                // Reiniciar el mapa y la lista de distancias
-                marcadores.forEach(marcador => marcador.setMap(null));
-                const listaDistancias = document.getElementById('distance-list');
-                listaDistancias.innerHTML = '';
-                const listaResultados = document.getElementById('result-list');
-                listaResultados.innerHTML = '';
-                input.value = '';
-                renderizadorDirecciones.set('directions', null);
-                mapa.setCenter({ lat: -33.4489, lng: -70.6693 });
-                mapa.setZoom(13);
-
-                // Eliminar círculo de búsqueda si existe
-                if (circuloBusqueda) {
-                    circuloBusqueda.setMap(null);
-                }
-
-                // Volver a agregar los marcadores de los hubs
-                agregarMarcadoresHubs();
-            });
-        }
-
-        google.maps.event.addDomListener(window, 'load', inicializarMapa);
     </script>
-    <!-- Incluir la API de Google Maps -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAovSlHVEYWgZf3a_Skux_nwRCcPZUM6rI&libraries=places,geometry"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAovSlHVEYWgZf3a_Skux_nwRCcPZUM6rI&callback=initMap&libraries=places,geometry"></script>
 </body>
 </html>
