@@ -1,198 +1,119 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>¿A cuánto está el hub de carga más cercano?</title>
+    <title>Integración Dinámica de Google Maps</title>
     <style>
-        body {
-            background-color: #0057B8;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
+        /* Agregar estilos CSS necesarios */
+        #map {
+            height: 80%;
+        }
+        html, body {
+            height: 100%;
             margin: 0;
-            font-family: Arial, sans-serif;
-            color: white;
-        }
-        #logo {
-            margin-bottom: 20px;
-        }
-        #title {
-            font-size: 24px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        #search-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 20px;
+            padding: 0;
         }
         #search-box {
             width: 300px;
-            height: 30px;
-            padding: 5px;
-            font-size: 14px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-        #reset-button {
             margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 14px;
-            border: none;
-            border-radius: 5px;
-            background-color: #ff0000;
-            color: white;
-            cursor: pointer;
         }
-        #map-container {
-            position: relative;
-            width: 80%;
-            height: 60%;
-            margin-bottom: 20px;
-        }
-        #map {
-            height: 100%;
-            width: 100%;
-            position: relative;
-        }
-        #legend {
-            background-color: #ffffff;
-            color: #000000;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: left;
-            margin-bottom: 20px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        .legend-item span {
-            width: 20px;
-            height: 20px;
-            display: inline-block;
-            margin-right: 10px;
-        }
-        .green-dot {
-            background-color: green;
-            border-radius: 50%;
-        }
-        .red-dot {
-            background-color: red;
-            border-radius: 50%;
-        }
-        .blue-dot {
-            background-color: blue;
-            border-radius: 50%;
-        }
-        .distance-list {
-            width: 80%;
-            margin-top: 20px;
-            color: black;
+        #distance-list {
+            margin-top: 10px;
         }
         .distance-item {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            color: white;
+            padding: 5px;
         }
         .green-bg {
-            background-color: green;
+            background-color: #d4edda;
         }
         .red-bg {
-            background-color: red;
+            background-color: #f8d7da;
+        }
+        #result-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .result-item {
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+        .result-item:hover {
+            background-color: #f0f0f0;
         }
     </style>
 </head>
 <body>
-    <div id="logo">
-        <img src="https://raw.githubusercontent.com/ppgaticac/Mapa-Hubs-Actuales-Futuros/main/logo-ea1fcd3296ac48693db3c00b710e2381%20(1).jpg" alt="Tucar Logo" height="100">
-    </div>
-    <div id="title">¿A cuánto está el hub de carga más cercano?</div>
-    <div id="search-container">
-        <input id="search-box" type="text" placeholder="Buscar dirección">
-        <button id="reset-button">Reiniciar búsqueda</button>
-    </div>
-    <div id="map-container">
-        <div id="map"></div>
-    </div>
-    <div id="legend">
-        <div class="legend-item">
-            <span class="blue-dot"></span>
-            Dirección buscada
-        </div>
-        <div class="legend-item">
-            <span class="green-dot"></span>
-            Hub de carga activo
-        </div>
-        <div class="legend-item">
-            <span class="red-dot"></span>
-            Hub de carga futuro
-        </div>
-    </div>
-    <div class="distance-list" id="distance-list"></div>
+    <input id="search-box" type="text" placeholder="Buscar...">
+    <button id="reset-button">Reiniciar</button>
+    <div id="result-list"></div>
+    <div id="distance-list"></div>
+    <div id="map"></div>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAovSlHVEYWgZf3a_Skux_nwRCcPZUM6rI&libraries=places,geometry"></script>
     <script>
-        function initMap() {
-            const map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 13,
-                center: { lat: -33.4489, lng: -70.6693 }, // Coordenadas de Santiago, Chile
-                mapTypeId: 'roadmap'
-            });
+        let mapa;
+        let marcadores = [];
+        let ventanaInfo = new google.maps.InfoWindow();
+        let servicioDirecciones = new google.maps.DirectionsService();
+        let renderizadorDirecciones = new google.maps.DirectionsRenderer();
+        let circuloBusqueda;
 
-            const hubs = [
-                { name: "Las Rejas", comuna: "Estación Central", address: "Av. María Rozas Velásquez 73, 9170428 Santiago, Estación Central, Región Metropolitana", lat: -33.456, lng: -70.719, type: 'futuro' },
-                { name: "Ciudad del Niño", comuna: "San Miguel", address: "Gran Av. José Miguel Carrera 6150, 8930520 San Miguel, Región Metropolitana", lat: -33.501, lng: -70.651, type: 'futuro' },
-                { name: "Florida Center", comuna: "La Florida", address: "Av. Vicuña Mackenna Ote. 6100, 8242155 La Florida, Región Metropolitana", lat: -33.511, lng: -70.602, type: 'futuro' },
-                { name: "Portal el Llano", comuna: "San Miguel", address: "Llano Subercaseaux, 8910339 San Miguel, Región Metropolitana", lat: -33.482, lng: -70.640, type: 'futuro' },
-                { name: "Alto San Francisco", comuna: "Santiago", address: "San Francisco 75, Santiago, Región Metropolitana", lat: -33.443, lng: -70.653, type: 'futuro' },
-                { name: "Nathaniel Cox", comuna: "Santiago", address: "Nataniel Cox 620, 8331081 Santiago, Región Metropolitana", lat: -33.451, lng: -70.655, type: 'futuro' },
-                { name: "Vicuña Mackenna", comuna: "Santiago", address: "Av. Vicuña Mackenna 665, 8330435 Santiago, Región Metropolitana", lat: -33.458, lng: -70.641, type: 'futuro' },
-                { name: "Ñuble", comuna: "Ñuñoa", address: "Av. Vicuña Mackenna 1700, Santiago, Ñuñoa, Región Metropolitana", lat: -33.464, lng: -70.631, type: 'futuro' },
-                { name: "Independencia", comuna: "Independencia", address: "Av. Independencia 565, 8380538 Independencia, Región Metropolitana", lat: -33.416, lng: -70.657, type: 'futuro' },
-                { name: "Parque Arauco", comuna: "Las Condes", address: "Av. Pdte. Kennedy 5413, 7550000 Las Condes, Región Metropolitana", lat: -33.400, lng: -70.578, type: 'activo' },
-                { name: "Espacio Urbano Las Rejas", comuna: "Estación Central", address: "Av. María Rozas Velásquez 73, 9170428 Santiago, Estación Central, Región Metropolitana", lat: -33.454, lng: -70.719, type: 'activo' }
-            ];
+        const hubs = [
+            { lat: -33.509915, lng: -70.650638, nombre: "Ciudad del niño", direccion: "Gran Av. José Miguel Carrera 6150, 8930520 San Miguel, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.524596, lng: -70.598747, nombre: "Florida center", direccion: "Av. Vicuña Mackenna Ote. 6100, 8242155 La Florida, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.501710, lng: -70.662125, nombre: "Portal el Llano", direccion: "Llano Subercaseaux, 8910339 San Miguel, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.444121, lng: -70.649597, nombre: "Alto San Francisco", direccion: "San Francisco 75, Santiago, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.457415, lng: -70.649070, nombre: "Nathaniel Cox", direccion: "Nataniel Cox 620, 8331081 Santiago, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.456594, lng: -70.648503, nombre: "Vicuña Mackenna", direccion: "Av. Vicuña Mackenna 665, 8330435 Santiago, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.464472, lng: -70.620384, nombre: "Ñuble", direccion: "Av. Vicuña Mackenna 1700, Santiago, Ñuñoa, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.422366, lng: -70.650869, nombre: "Independencia", direccion: "Av. Independencia 565, 8380538 Independencia, Región Metropolitana", tipo: "futuro" },
+            { lat: -33.402900, lng: -70.579174, nombre: "Parque Arauco", direccion: "Av. Pdte. Kennedy 5413, 7550000 Las Condes, Región Metropolitana", tipo: "activo" },
+            { lat: -33.465957, lng: -70.699735, nombre: "Espacio Urbano Las Rejas", direccion: "Av. María Rozas Velásquez 73, 9170428 Santiago, Estación Central, Región Metropolitana", tipo: "activo" }
+        ];
 
-            const infoWindow = new google.maps.InfoWindow();
-            const markers = [];
-            const directionsService = new google.maps.DirectionsService();
-            const directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true });
-            directionsRenderer.setMap(map);
-            // Añadir marcadores para hubs
-            hubs.forEach(location => {
-                const marker = new google.maps.Marker({
-                    position: { lat: location.lat, lng: location.lng },
-                    map: map,
-                    title: location.name,
+        function agregarMarcadoresHubs() {
+            hubs.forEach(ubicacion => {
+                const marcador = new google.maps.Marker({
+                    position: { lat: ubicacion.lat, lng: ubicacion.lng },
+                    map: mapa,
+                    title: ubicacion.nombre,
+                    label: ubicacion.nombre,
                     icon: {
                         path: google.maps.SymbolPath.CIRCLE,
                         scale: 10,
-                        fillColor: location.type === 'activo' ? 'green' : 'red',
+                        fillColor: ubicacion.tipo === 'activo' ? 'green' : 'red',
                         fillOpacity: 1,
                         strokeWeight: 1,
                         strokeColor: 'black'
-                    }
+                    },
+                    animation: google.maps.Animation.DROP
                 });
 
-                marker.addListener('click', () => {
-                    infoWindow.setContent(`<div><strong>${location.name}</strong><br>${location.address}</div>`);
-                    infoWindow.open(map, marker);
+                marcador.addListener('click', () => {
+                    ventanaInfo.setContent(`<div><strong>${ubicacion.nombre}</strong><br>${ubicacion.direccion}</div>`);
+                    ventanaInfo.open(mapa, marcador);
                 });
 
-                markers.push(marker);
+                marcadores.push(marcador);
             });
+        }
+
+        function inicializarMapa() {
+            // Inicializar el mapa
+            mapa = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -33.4489, lng: -70.6693 },
+                zoom: 13
+            });
+
+            // Agregar marcadores de hubs
+            agregarMarcadoresHubs();
+            renderizadorDirecciones.setMap(mapa);
 
             const input = document.getElementById('search-box');
             const searchBox = new google.maps.places.SearchBox(input);
 
-            map.controls[google.maps.ControlPosition.TOP_CENTER].push(input);
+            mapa.controls[google.maps.ControlPosition.TOP_CENTER].push(input);
 
             searchBox.addListener('places_changed', () => {
                 const places = searchBox.getPlaces();
@@ -202,22 +123,25 @@
                 }
 
                 // Limpiar marcadores anteriores y lista de distancias
-                markers.forEach(marker => marker.setMap(null));
-                const distanceList = document.getElementById('distance-list');
-                distanceList.innerHTML = '';
+                marcadores.forEach(marcador => marcador.setMap(null));
+                const listaDistancias = document.getElementById('distance-list');
+                listaDistancias.innerHTML = '';
+                const listaResultados = document.getElementById('result-list');
+                listaResultados.innerHTML = '';
 
-                places.forEach(place => {
-                    if (!place.geometry) {
+                places.forEach(lugar => {
+                    if (!lugar.geometry) {
                         return;
                     }
 
-                    const placeLocation = place.geometry.location;
+                    const ubicacionLugar = lugar.geometry.location;
 
                     // Agregar marcador de la ubicación buscada
-                    const marker = new google.maps.Marker({
-                        position: placeLocation,
-                        map: map,
-                        title: 'Ubicación buscada',
+                    const marcador = new google.maps.Marker({
+                        position: ubicacionLugar,
+                        map: mapa,
+                        title: lugar.name || 'Ubicación buscada',
+                        label: lugar.name || 'Ubicación buscada',
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
                             scale: 10,
@@ -225,36 +149,66 @@
                             fillOpacity: 1,
                             strokeWeight: 1,
                             strokeColor: 'black'
-                        }
+                        },
+                        animation: google.maps.Animation.BOUNCE
                     });
 
-                    markers.push(marker);
+                    marcadores.push(marcador);
+
+                    // Dibujar un círculo alrededor de la ubicación buscada
+                    if (circuloBusqueda) {
+                        circuloBusqueda.setMap(null);
+                    }
+                    circuloBusqueda = new google.maps.Circle({
+                        map: mapa,
+                        radius: 3000,
+                        fillColor: '#AA0000',
+                        fillOpacity: 0.2,
+                        strokeColor: '#AA0000',
+                        strokeOpacity: 0.5,
+                        strokeWeight: 2,
+                        center: ubicacionLugar
+                    });
 
                     hubs.forEach(hub => {
-                        const hubLocation = new google.maps.LatLng(hub.lat, hub.lng);
-                        const distance = google.maps.geometry.spherical.computeDistanceBetween(placeLocation, hubLocation);
-                        const distanceKm = (distance / 1000).toFixed(2);
+                        const ubicacionHub = new google.maps.LatLng(hub.lat, hub.lng);
+                        const distancia = google.maps.geometry.spherical.computeDistanceBetween(ubicacionLugar, ubicacionHub);
+                        const distanciaKm = (distancia / 1000).toFixed(2);
 
-                        const distanceItem = document.createElement('div');
-                        distanceItem.classList.add('distance-item');
-                        distanceItem.classList.add(distanceKm <= 3 ? 'green-bg' : 'red-bg');
-                        distanceItem.innerHTML = `<strong>${hub.name}</strong> - ${distanceKm} km`;
+                        const itemDistancia = document.createElement('div');
+                        itemDistancia.classList.add('distance-item', distanciaKm <= 3 ? 'green-bg' : 'red-bg');
+                        itemDistancia.innerHTML = `<strong>${hub.nombre}</strong> - ${distanciaKm} km`;
 
-                        distanceList.appendChild(distanceItem);
+                        listaDistancias.appendChild(itemDistancia);
 
                         // Mostrar ruta entre la ubicación buscada y el hub
-                        directionsService.route({
-                            origin: placeLocation,
-                            destination: hubLocation,
+                        servicioDirecciones.route({
+                            origin: ubicacionLugar,
+                            destination: ubicacionHub,
                             travelMode: 'DRIVING'
                         }, (response, status) => {
                             if (status === 'OK') {
-                                directionsRenderer.setDirections(response);
+                                renderizadorDirecciones.setDirections(response);
+                            } else {
+                                console.error(`La solicitud de direcciones falló debido a ${status}`);
                             }
                         });
                     });
 
-                    map.setCenter(placeLocation);
+                    mapa.panTo(ubicacionLugar);
+                    mapa.setZoom(14);
+
+                    // Agregar resultado de búsqueda a la lista
+                    const itemResultado = document.createElement('div');
+                    itemResultado.classList.add('result-item');
+                    itemResultado.textContent = lugar.name;
+                    itemResultado.addEventListener('click', () => {
+                        mapa.panTo(ubicacionLugar);
+                        mapa.setZoom(14);
+                        marcador.setAnimation(google.maps.Animation.BOUNCE);
+                        setTimeout(() => marcador.setAnimation(null), 1500);
+                    });
+                    listaResultados.appendChild(itemResultado);
                 });
 
                 input.value = '';
@@ -262,43 +216,29 @@
 
             document.getElementById('reset-button').addEventListener('click', () => {
                 // Reiniciar el mapa y la lista de distancias
-                markers.forEach(marker => marker.setMap(null));
-                distanceList.innerHTML = '';
+                marcadores.forEach(marcador => marcador.setMap(null));
+                const listaDistancias = document.getElementById('distance-list');
+                listaDistancias.innerHTML = '';
+                const listaResultados = document.getElementById('result-list');
+                listaResultados.innerHTML = '';
                 input.value = '';
-                directionsRenderer.set('directions', null);
-                map.setCenter({ lat: -33.4489, lng: -70.6693 });
-                map.setZoom(13);
+                renderizadorDirecciones.set('directions', null);
+                mapa.setCenter({ lat: -33.4489, lng: -70.6693 });
+                mapa.setZoom(13);
+
+                // Eliminar círculo de búsqueda si existe
+                if (circuloBusqueda) {
+                    circuloBusqueda.setMap(null);
+                }
 
                 // Volver a agregar los marcadores de los hubs
-                hubs.forEach(location => {
-                    const marker = new google.maps.Marker({
-                        position: { lat: location.lat, lng: location.lng },
-                        map: map,
-                        title: location.name,
-                        icon: {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            scale: 10,
-                            fillColor: location.type === 'activo' ? 'green' : 'red',
-                            fillOpacity: 1,
-                            strokeWeight: 1,
-                            strokeColor: 'black'
-                        }
-                    });
-
-                    marker.addListener('click', () => {
-                        infoWindow.setContent(`<div><strong>${location.name}</strong><br>${location.address}</div>`);
-                        infoWindow.open(map, marker);
-                    });
-
-                    markers.push(marker);
-                });
+                agregarMarcadoresHubs();
             });
         }
 
-        google.maps.event.addDomListener(window, 'load', initMap);
+        google.maps.event.addDomListener(window, 'load', inicializarMapa);
     </script>
+    <!-- Incluir la API de Google Maps -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAovSlHVEYWgZf3a_Skux_nwRCcPZUM6rI&libraries=places,geometry"></script>
 </body>
 </html>
-
-
-
