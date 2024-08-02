@@ -224,14 +224,14 @@
                 const hubLocation = new google.maps.LatLng(hub.lat, hub.lng);
                 let distance = null;
                 if (addressLocation) {
-                    distance = google.maps.geometry.spherical.computeDistanceBetween(addressLocation, hubLocation);
+                    distance = google.maps.geometry.spherical.computeDistanceBetween(addressLocation, hubLocation) / 1000; // Convertir a km
                 }
                 const listItem = document.createElement('li');
-                listItem.textContent = `${hub.name}`;
+                listItem.textContent = `${hub.name}${distance !== null ? ` - ${distance.toFixed(2)} km` : ''}`;
                 listItem.classList.add(hub.status === 'active' ? 'active' : 'under-construction');
 
                 if (distance !== null) {
-                    if (distance <= 3000) {
+                    if (distance <= 3) {
                         listItem.classList.add('within-radius');
                         listItem.classList.remove('outside-radius');
                     } else {
